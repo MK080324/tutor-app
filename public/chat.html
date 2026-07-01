@@ -82,7 +82,8 @@
     @keyframes shimmer { 0%{background-position:115% 0;} 100%{background-position:-115% 0;} }
 
     /* ---- 输入框 ---- */
-    #composer { padding:8px 0 18px; }
+    /* 左右留最小距离:窗口窄到贴近后,是框变窄、距离不变(不再贴边) */
+    #composer { padding:8px 16px 18px; }
     .cbox { max-width:760px; margin:0 auto; border:1.5px solid var(--accent); border-radius:16px;
       background:var(--panel); padding:8px 10px 8px 14px; }
     .cbox textarea { width:100%; border:none; outline:none; resize:none; background:transparent;

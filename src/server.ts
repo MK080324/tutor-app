@@ -33,6 +33,14 @@ type Req = express.Request & { userId?: string };
 
 const app = express();
 app.use(express.json({ limit: "30mb" })); // 大一点,容纳上传的图片(data URL)
+
+// 干净 URL:/chat /login(带 .html 的重定向过去),资源仍走 static
+const page = (f: string) => (_req: express.Request, res: express.Response) =>
+  res.sendFile(pathmod.join(ROOT, "public", f));
+app.get("/chat.html", (_req, res) => res.redirect("/chat"));
+app.get("/login.html", (_req, res) => res.redirect("/login"));
+app.get("/chat", page("chat.html"));
+app.get("/login", page("login.html"));
 app.use(express.static(path.join(ROOT, "public")));
 
 // ---- 登录 ----
@@ -299,7 +307,7 @@ app.post("/api/chat", requireAuth, async (req: Req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.redirect(getUserId(req) ? "/chat.html" : "/login.html");
+  res.redirect(getUserId(req) ? "/chat" : "/login");
 });
 
 const server = app.listen(config.port, () => {

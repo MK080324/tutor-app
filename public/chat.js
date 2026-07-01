@@ -494,7 +494,7 @@ function accountMenu() {
   showMenu(r.left, r.bottom + 4, [
     { label: "修改昵称", fn: changeNickname },
     { label: "修改密码", fn: changePassword },
-    { label: "退出登录", danger: true, fn: async () => { await fetch("/api/logout", { method: "POST" }); location.href = "/login.html"; } },
+    { label: "退出登录", danger: true, fn: async () => { await fetch("/api/logout", { method: "POST" }); location.href = "/login"; } },
   ]);
 }
 async function changeNickname() {
@@ -603,13 +603,13 @@ $("newChat").onclick = () => { abortCurrent(); showEmpty(); closeSidebarOnMobile
 // ---------- 启动 ----------
 (async function init() {
   let me;
-  try { me = await jget("/api/me"); } catch { location.href = "/login.html"; return; }
+  try { me = await jget("/api/me"); } catch { location.href = "/login"; return; }
   S.user = me.userId;
   S.nickname = me.nickname || "";
   $("userName").textContent = S.nickname || me.userId;
   setTheme(me.prefs?.theme || "dark");
   initSidebar();
-  if (!(await claimPresence())) { location.href = "/login.html?full=1"; return; }
+  if (!(await claimPresence())) { location.href = "/login?full=1"; return; }
   try { S.tutors = (await jget("/api/tutors")).tutors; } catch { S.tutors = []; }
   renderTutors();
   if (S.tutors.length) await selectTutor(S.tutors[0]);

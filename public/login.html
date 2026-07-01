@@ -75,7 +75,7 @@
           password: document.getElementById("p").value,
         }),
       });
-      if (r.ok) location.href = "/chat.html";
+      if (r.ok) location.href = "/chat";
       else err.textContent = (await r.json().catch(() => ({}))).error || "登录失败";
     }
     document.getElementById("go").onclick = login;

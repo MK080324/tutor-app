@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>登录 · 助教</title>
+  <style>
+    :root {
+      --bg: #f2f3f5; --card: #fff; --fg: #1a1a1a; --sub: #888;
+      --border: #e2e2e5; --input: #fff; --accent: #4c6ef5; --accent-fg:#fff;
+      --err: #e5484d;
+    }
+    html[data-theme="dark"] {
+      --bg: #1a1b1e; --card: #232427; --fg: #e8e8ea; --sub: #8a8a90;
+      --border: #35363a; --input: #2a2b2f; --accent: #4c6ef5; --accent-fg:#fff;
+      --err: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; display: grid; place-items: center;
+      background: var(--bg); color: var(--fg);
+      font-family: system-ui,-apple-system,"PingFang SC",sans-serif; transition: background .2s; }
+    .card { background: var(--card); padding: 34px 30px; border-radius: 16px;
+      box-shadow: 0 6px 30px rgba(0,0,0,.10); width: 320px; border: 1px solid var(--border); }
+    h1 { font-size: 19px; margin: 0 0 22px; }
+    input { width: 100%; padding: 11px 13px; margin: 7px 0; font-size: 14px;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--input); color: var(--fg); }
+    input:focus { outline: none; border-color: var(--accent); }
+    button.go { width: 100%; padding: 11px; margin-top: 14px; border: 0; border-radius: 10px;
+      background: var(--accent); color: var(--accent-fg); font-size: 14px; cursor: pointer; }
+    .err { color: var(--err); font-size: 13px; min-height: 18px; margin-top: 10px; }
+    .banner { background: var(--err); color: #fff; border-radius: 10px; padding: 9px 12px;
+      font-size: 13px; margin-bottom: 14px; display: none; }
+    .themebtn { position: fixed; top: 16px; right: 18px; width: 38px; height: 38px; border-radius: 9px;
+      border: none; background: none; color: var(--sub); cursor: pointer; display: grid; place-items: center; }
+    .themebtn:hover { background: rgba(128,128,128,.15); }
+    .themebtn svg { width: 21px; height: 21px; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+  <button class="themebtn" id="theme" title="深色/浅色">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor"/></svg>
+  </button>
+  <div class="card">
+    <div class="banner" id="banner">当前人数已满，请稍后再试</div>
+    <h1>助教 · 登录</h1>
+    <input id="u" placeholder="用户名" autocomplete="username" />
+    <input id="p" type="password" placeholder="密码" autocomplete="current-password" />
+    <button class="go" id="go">登录</button>
+    <div class="err" id="err"></div>
+  </div>
+  <script>
+    // 登录页主题:默认浅色,记在本地
+    const root = document.documentElement;
+    const themeBtn = document.getElementById("theme");
+    function applyTheme(t) {
+      root.setAttribute("data-theme", t);
+      localStorage.setItem("theme-login", t);
+    }
+    applyTheme(localStorage.getItem("theme-login") || "light");
+    themeBtn.onclick = () =>
+      applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+
+    if (new URLSearchParams(location.search).get("full"))
+      document.getElementById("banner").style.display = "block";
+
+    const err = document.getElementById("err");
+    async function login() {
+      err.textContent = "";
+      const r = await fetch("/api/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("u").value,
+          password: document.getElementById("p").value,
+        }),
+      });
+      if (r.ok) location.href = "/chat.html";
+      else err.textContent = (await r.json().catch(() => ({}))).error || "登录失败";
+    }
+    document.getElementById("go").onclick = login;
+    document.getElementById("p").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") login();
+    });
+  </script>
+</body>
+</html>

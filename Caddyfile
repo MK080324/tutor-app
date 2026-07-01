@@ -1,0 +1,5 @@
+# 自动 HTTPS(Let's Encrypt)。域名从环境变量 TUTOR_DOMAIN 注入。
+# DNS:Cloudflare 灰云 A 记录指服务器公网 IP(不开橙云代理)。
+{$TUTOR_DOMAIN} {
+	reverse_proxy app:3000
+}

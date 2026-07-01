@@ -1,0 +1,36 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # 让 opencode 的 DB / 缓存 / 下载的 provider 都落进 volume,换服务器零成本
+      - HOME=/app/data/home
+    volumes:
+      - tutor-data:/app/data
+      # 导师库:热挂载。往服务器 ./courses/ 里 scp 一个带 CLAUDE.md 的文件夹
+      # 即多一个导师,无需重建镜像或重启容器。
+      - ./courses:/app/courses
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Caddyfile 里的 {$TUTOR_DOMAIN} 从这里取
+      - TUTOR_DOMAIN=${TUTOR_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  tutor-data:
+  caddy-data:
+  caddy-config:

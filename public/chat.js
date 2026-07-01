@@ -112,6 +112,14 @@ function renderRich(el, raw) {
   catch { el.textContent = raw; return; }
   html = html.replace(/@@MATH(\d+)@@/g, (_, i) => math[+i]);
   el.innerHTML = html;
+  // 模型有时自己写 downloads/xxx 的链接(相对路径,直接点会 404)→ 改写成真下载接口
+  el.querySelectorAll("a[href]").forEach((a) => {
+    const m = (a.getAttribute("href") || "").match(/^\/?downloads\/(.+)$/);
+    if (m) {
+      a.href = "/api/download" + q("&file=" + encodeURIComponent(decodeURIComponent(m[1])));
+      a.target = "_blank";
+    }
+  });
   // svg 代码块 → 内联矢量图
   el.querySelectorAll("code.language-svg").forEach((c) => {
     const pre = c.closest("pre") || c;

@@ -74,16 +74,12 @@
       padding:3px 7px; border-radius:7px; display:flex; align-items:center; gap:3px; }
     .act:hover { background:var(--hover); color:var(--fg); }
 
-    /* 状态:纯文字 + 从左到右呼吸微光 */
+    /* 状态:纯文字 + 从左到右柔和呼吸(不消失、慢、跨状态连续)*/
     .status { color:var(--sub); font-size:13px; margin:4px 0; display:inline-block;
-      background:linear-gradient(90deg,var(--sub) 0%,var(--shimmer) 20%,#fff0 40%,var(--sub) 60%);
-      background-size:250% 100%; -webkit-background-clip:text; background-clip:text;
-      -webkit-text-fill-color:transparent; animation:shimmer 1.6s linear infinite; }
-    html[data-theme="light"] .status {
-      background:linear-gradient(90deg,var(--sub) 0%,#000 20%,var(--sub) 45%,var(--sub) 100%);
-      background-size:250% 100%; -webkit-background-clip:text; background-clip:text;
-      -webkit-text-fill-color:transparent; }
-    @keyframes shimmer { 0%{background-position:120% 0;} 100%{background-position:-120% 0;} }
+      background:linear-gradient(90deg, var(--sub) 38%, var(--fg) 50%, var(--sub) 62%);
+      background-size:220% 100%; -webkit-background-clip:text; background-clip:text;
+      -webkit-text-fill-color:transparent; animation:shimmer 2.6s ease-in-out infinite; }
+    @keyframes shimmer { 0%{background-position:115% 0;} 100%{background-position:-115% 0;} }
 
     /* ---- 输入框 ---- */
     #composer { padding:8px 0 18px; }
@@ -145,9 +141,10 @@
     .katex-display { overflow-x:auto; overflow-y:hidden; padding:2px 0; }
     .dls { margin-top:8px; }
     .dlbtn { display:inline-flex; gap:6px; align-items:center; margin:4px 6px 0 0; padding:7px 12px;
-      border:1px solid var(--border); border-radius:9px; background:var(--panel); color:var(--fg);
-      cursor:pointer; font-size:13px; text-decoration:none; }
-    .dlbtn:hover { background:var(--hover); }
+      border:1px solid var(--accent); border-radius:9px;
+      background:color-mix(in srgb, var(--accent) 12%, transparent); color:var(--accent);
+      cursor:pointer; font-size:13px; font-weight:500; text-decoration:none; }
+    .dlbtn:hover { background:color-mix(in srgb, var(--accent) 22%, transparent); }
 
     /* 菜单渐入 */
     .menu { animation: pop .12s ease-out; transform-origin: top left; }

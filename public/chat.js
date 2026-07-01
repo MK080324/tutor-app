@@ -88,7 +88,7 @@ function modal(opts) {
       if (opts.onSubmit) { const e2 = await opts.onSubmit(vals); if (e2) { err.textContent = e2; return; } }
       close(opts.fields ? vals : true);
     };
-    m.querySelectorAll("input").forEach((inp) => inp.addEventListener("keydown", (e) => { if (e.key === "Enter") ok.click(); }));
+    m.querySelectorAll("input").forEach((inp) => inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) ok.click(); }));
   });
 }
 function modalConfirm(title, message, okText, danger) {
@@ -549,6 +549,7 @@ function autosize() { input.style.height = "auto"; input.style.height = Math.min
 input.addEventListener("input", autosize);
 input.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
+  if (e.isComposing || e.keyCode === 229) return; // 输入法组字中:回车用于上屏,不发送
   if (e.shiftKey) return; // shift+回车:默认换行
   if (e.altKey) { // option+回车:手动插入换行
     e.preventDefault();

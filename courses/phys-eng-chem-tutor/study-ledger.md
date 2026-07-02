@@ -6,6 +6,7 @@ daily_cap: 3                     # 每个北京日最多做 3 份
 last_rollover_date: null         # 首次开课时设为当天(北京)，从当天起计额度，不倒补历史；此后每次开课 roll-forward
 last_subject: null               # 上一份的科目；轮换顺序 物理→化学→英语背单词→物理…（首份从物理起）
 in_progress: null                # 有未做完的份就记这里(跨天优先接续)；结构 {date, subject, phase(learning/assessing), 内容, 已到哪}
+carryover: null                  # 昨天收工时说的"最后一句/念想"——对下次开课的承诺(先复习哪几个词/先接哪科)。今天开课第一件事就是兑现它，兑现后清空。结构 {date, 原话, review_vocab:[词…], then_subject}
 last_updated: null
 ---
 

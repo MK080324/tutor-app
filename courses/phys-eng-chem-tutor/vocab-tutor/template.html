@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+  翻卡模板 · 老师每天复制本文件到 cards/YYYY-MM-DD.html，只改下面两处:
+    1) DECK = {...}     标题 + 日期
+    2) CARDS = [...]    今天的词:每项 {w:"单词", pos:"词性", cn:"中文", ex:"一句英文例句"}
+  其余 UI 代码一律不动。
+-->
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>翻卡片 · 背单词</title>
+<style>
+  :root{--bg:#0f1424;--ink:#eaf0ff;--mut:#93a0c7;--acc:#6c8cff;--line:#2a3457;
+        --front:#1d2742;--back:#13301f;--backink:#bff5dc}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding:18px;-webkit-font-smoothing:antialiased}
+  .top{width:100%;max-width:340px;display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:13px;margin-bottom:10px}
+  #title{font-weight:600;color:var(--ink)}
+  .stage{display:flex;align-items:center;gap:6px}
+  .nav{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#1a2138;color:var(--ink);font-size:24px;cursor:pointer;flex:0 0 auto}
+  .nav:active{background:#232c4a}
+  .flip{width:280px;height:380px;perspective:1200px;cursor:pointer}
+  .inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+  .inner.on{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    border:1px solid var(--line);border-radius:22px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
+  .front{background:linear-gradient(160deg,#1d2742,#151c30)}
+  .back{background:linear-gradient(160deg,#13301f,#0f2417);transform:rotateY(180deg)}
+  .word{font-size:42px;font-weight:700;letter-spacing:.5px;word-break:break-word}
+  .pos{color:var(--mut);font-size:15px;font-style:italic}
+  .cn{font-size:26px;font-weight:700;color:var(--backink)}
+  .ex{color:#9fe0bd;font-size:15px;line-height:1.6}
+  .ex b{color:#fff;font-style:normal}
+  .spk{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:#0f1424;color:var(--ink);font-size:20px;cursor:pointer}
+  .hint{position:absolute;bottom:16px;left:0;right:0;color:var(--mut);font-size:11px}
+  .bar{display:flex;gap:10px;margin-top:16px}
+  .bar button{background:#1a2138;border:1px solid var(--line);color:var(--mut);padding:9px 16px;border-radius:10px;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+  <div class="top"><span id="title"></span><span id="count"></span></div>
+  <div class="stage">
+    <button class="nav" id="prev">‹</button>
+    <div class="flip" id="flip">
+      <div class="inner" id="inner">
+        <div class="face front">
+          <div class="word" id="fw"></div>
+          <div class="pos" id="fp"></div>
+          <button class="spk" id="spk">🔊</button>
+          <div class="hint">点卡片 / 空格 翻面</div>
+        </div>
+        <div class="face back">
+          <div class="cn" id="bc"></div>
+          <div class="ex" id="be"></div>
+          <div class="hint">← → 换下一个词</div>
+        </div>
+      </div>
+    </div>
+    <button class="nav" id="next">›</button>
+  </div>
+  <div class="bar"><button id="shuffle">🔀 打乱</button><button id="restart">↺ 从头</button></div>
+
+<script>
+/* ===== 老师每天只改这两处 ===== */
+const DECK  = {title:"示例牌组", date:"YYYY-MM-DD"};
+const CARDS = [
+  {w:"example", pos:"n.", cn:"例子", ex:"This is an example card."}
+];
+/* ============================== */
+
+let i=0, flipped=false;
+const $=id=>document.getElementById(id);
+function bold(ex,w){ if(!ex) return ''; try{const re=new RegExp('\\b('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\w*)\\b','ig'); return ex.replace(re,'<b>$1</b>');}catch(e){return ex;} }
+function render(){
+  const c=CARDS[i];
+  $('fw').textContent=c.w; $('fp').textContent=c.pos||'';
+  $('bc').textContent=c.cn; $('be').innerHTML=bold(c.ex||'', c.w);
+  $('count').textContent=(i+1)+' / '+CARDS.length;
+  flipped=false; $('inner').classList.remove('on');
+}
+function flip(){ flipped=!flipped; $('inner').classList.toggle('on',flipped); }
+function go(d){ i=(i+d+CARDS.length)%CARDS.length; render(); }
+function speak(){ try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(CARDS[i].w);u.lang='en-US';u.rate=.9;speechSynthesis.speak(u);}catch(e){} }
+
+let ignore=false;
+$('flip').onclick=()=>{ if(ignore)return; flip(); };
+$('prev').onclick=()=>go(-1);
+$('next').onclick=()=>go(1);
+$('spk').onclick=e=>{ e.stopPropagation(); speak(); };
+$('shuffle').onclick=()=>{ for(let k=CARDS.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[CARDS[k],CARDS[j]]=[CARDS[j],CARDS[k]];} i=0; render(); };
+$('restart').onclick=()=>{ i=0; render(); };
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); flip(); }
+  else if(e.code==='ArrowLeft') go(-1);
+  else if(e.code==='ArrowRight') go(1);
+  else if(e.key==='s'||e.key==='S') speak();
+});
+// 手机滑动:左右滑换词,轻点翻面
+let sx=null;
+const stage=document.querySelector('.stage');
+stage.addEventListener('touchstart',e=>{ sx=e.touches[0].clientX; },{passive:true});
+stage.addEventListener('touchend',e=>{
+  if(sx===null) return;
+  const dx=e.changedTouches[0].clientX-sx; sx=null;
+  if(Math.abs(dx)>50){ ignore=true; setTimeout(()=>ignore=false,350); go(dx<0?1:-1); }
+});
+$('title').textContent=DECK.title||'背单词';
+render();
+</script>
+</body>
+</html>

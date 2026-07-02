@@ -562,7 +562,7 @@ input.addEventListener("keydown", (e) => {
   e.preventDefault(); send(); // 回车:发送
 });
 // ---------- 侧边栏折叠偏好 + 响应式 ----------
-const isMobile = () => window.innerWidth < 768;
+const isMobile = () => window.innerWidth <= 900;
 function setCollapsed(c) {
   document.body.classList.toggle("collapsed", c);
   localStorage.setItem("sidebar", c ? "collapsed" : "expanded");
@@ -573,9 +573,27 @@ function initSidebar() {
   document.body.classList.toggle("collapsed", pref === "collapsed");
 }
 function closeSidebarOnMobile() { if (isMobile()) setCollapsed(true); }
-$("toggleSide").onclick = () => setCollapsed(!document.body.classList.contains("collapsed"));
+const toggleSidebar = () => setCollapsed(!document.body.classList.contains("collapsed"));
+$("toggleSide").onclick = toggleSidebar;
+$("toggleSideIn").onclick = toggleSidebar; // 侧边栏内的收起按钮,效果同顶栏那个
 $("backdrop").onclick = () => setCollapsed(true);
-$("newChat").onclick = () => { abortCurrent(); showEmpty(); closeSidebarOnMobile(); };
+function newChat() { abortCurrent(); showEmpty(); closeSidebarOnMobile(); }
+$("newChat").onclick = newChat;
+
+// ---------- 快捷键:新建对话(仅电脑,不显性提示;悬停铅笔图标才显示)----------
+(function initShortcut() {
+  const desktop = matchMedia("(hover:hover) and (pointer:fine)").matches;
+  if (!desktop) return; // 触屏设备(手机/平板)不启用
+  const isMac = /Mac/i.test(navigator.userAgentData?.platform || navigator.platform || "");
+  $("newChat").title = isMac ? "新建对话（⌘+Shift+K）" : "新建对话（Ctrl+Shift+K）";
+  window.addEventListener("keydown", (e) => {
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (mod && e.shiftKey && !e.altKey && e.code === "KeyK") { // K 不分大小写
+      e.preventDefault();
+      newChat();
+    }
+  });
+})();
 
 // ---------- 麦克风:浏览器自带语音识别(Web Speech API)----------
 (function initMic() {

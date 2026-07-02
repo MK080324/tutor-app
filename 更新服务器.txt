@@ -1,0 +1,52 @@
+tutor-app 服务器更新方法
+========================================
+
+线上地址 : https://tutor.gagamin.com/chat
+服务器   : 阿里云香港 ECS   ssh root@47.239.192.108
+代码仓库 : git@github.com:MK080324/tutor-app.git
+
+
+【日常更新:改了代码 / UI 之后】
+--------------------------------------
+本地:
+    改代码 → git push
+
+服务器:
+    cd ~/tutor-app
+    git pull
+    docker compose up -d --build      # 自动重建并替换容器,不用先停;用户数据不丢
+
+改完到网页记得硬刷新(Cmd+Shift+R),css/js 有缓存。
+
+
+【只加 / 改导师(courses/ 里的内容)—— 不用重建镜像】
+--------------------------------------
+因为 courses/ 是挂载的,改完立刻生效:
+    服务器:  cd ~/tutor-app && git pull        # 然后刷新网页即可
+    或直接:  scp -r 你的导师文件夹 root@47.239.192.108:~/tutor-app/courses/
+
+(每个带 CLAUDE.md 的文件夹 = 一个导师)
+
+
+【常用排查命令(在 ~/tutor-app 里跑)】
+--------------------------------------
+    docker compose ps               看 app / caddy 是否 Up
+    docker compose logs -f app      实时看应用日志
+    docker compose restart app      只重启,不重建
+    docker compose down             停掉(数据在 volume 里,不丢)
+    docker compose up -d            重新起(不重建)
+
+
+【登录】
+--------------------------------------
+5 个账号,密码 = 用户名:  mk / alan / judy / jacky / guest
+最多同时 3 个窗口在线,满了登录会提示"当前人数已满"
+改昵称 / 改密码:登录后点左下角用户名
+
+
+【要记住的坑】
+--------------------------------------
+- .env 只在服务器本地(没进 git),里面有 DeepSeek key,别删。
+- 改了 src/ 或 public/ 必须带 --build;只改 courses/ 不用。
+- 网页有缓存,更新后一定 Cmd+Shift+R 硬刷新。
+- 用户对话 / 进度都在 Docker 具名 volume "tutor-data" 里,重建镜像不会丢。

@@ -280,6 +280,9 @@ function renderMessage(m) {
     acts.appendChild(iconAct(IC.rerender, "重新渲染", () => loadMessages()));
   }
   div.appendChild(acts);
+  // 持久下载按钮:从服务器返回的 downloads 严格挂到本条消息下(刷新/重渲染都会重建)
+  if (m.role !== "user" && Array.isArray(m.downloads))
+    for (const dl of m.downloads) attachDownload(div, dl);
   wrap.appendChild(div);
   return { div, bubble: b, acts };
 }
@@ -296,18 +299,25 @@ function statusText(ev) {
 }
 
 // ---------- 下载按钮 ----------
-function attachDownload(div, filename) {
+// dl 可为字符串(生成过程中的 transient,按文件名走可变工作区)
+// 或 {filename, hash}(加载/刷新后的持久按钮,按 hash 走只增归档 —— 永不失效)
+function attachDownload(div, dl) {
+  const filename = typeof dl === "string" ? dl : dl.filename;
+  const hash = typeof dl === "string" ? null : dl.hash;
   let dls = div.querySelector(".dls");
   if (!dls) {
     dls = document.createElement("div");
     dls.className = "dls";
     div.insertBefore(dls, div.querySelector(".acts"));
   }
-  if (dls.querySelector(`[data-f="${CSS.escape(filename)}"]`)) return;
+  const key = hash || filename;
+  if (dls.querySelector(`[data-f="${CSS.escape(key)}"]`)) return;
   const a = document.createElement("a");
-  a.className = "dlbtn"; a.dataset.f = filename;
-  a.textContent = "⬇ " + filename;
-  a.href = "/api/download" + q(`&file=${encodeURIComponent(filename)}`);
+  a.className = "dlbtn"; a.dataset.f = key;
+  a.textContent = "⬇ " + filename.split("/").pop();
+  a.href = hash
+    ? "/api/download" + q(`&hash=${hash}&name=${encodeURIComponent(filename.split("/").pop())}`)
+    : "/api/download" + q(`&file=${encodeURIComponent(filename)}`);
   dls.appendChild(a);
 }
 
@@ -353,7 +363,6 @@ async function send(overrideText) {
   S.generating = true; updateSendBtn();
   const controller = new AbortController();
   S.abort = () => controller.abort();
-  const downloads = [];
   let acc = "";
   try {
     const resp = await fetch("/api/chat", {
@@ -376,7 +385,7 @@ async function send(overrideText) {
         const ev = JSON.parse(line.slice(5).trim());
         if (ev.type === "status") { statusEl.textContent = statusText(ev); }
         else if (ev.type === "delta") { acc += ev.text; bot.bubble.textContent = acc; statusEl.textContent = "回复中"; scrollDown(); }
-        else if (ev.type === "download") { downloads.push(ev.filename); attachDownload(bot.div, ev.filename); }
+        else if (ev.type === "download") { attachDownload(bot.div, ev.filename); }
         else if (ev.type === "error") { acc += "\n[出错] " + ev.message; bot.bubble.textContent = acc; }
       }
     }
@@ -387,20 +396,15 @@ async function send(overrideText) {
     if (acc) renderRich(bot.bubble, acc); // 完成后富渲染
     bot.acts.style.display = "";
     S.generating = false; updateSendBtn();
-    await syncAfterTurn(downloads);
+    await syncAfterTurn();
   }
 }
 
-// 一轮结束后:重载消息(拿 id/自动标题),并把本轮下载按钮补回最后一条
-async function syncAfterTurn(downloads) {
+// 一轮结束后:重载消息(拿 id/自动标题/持久下载按钮 —— loadMessages 会按消息重建)
+async function syncAfterTurn() {
   await loadMessages();
   await loadConvs();
   renderConvs();
-  if (downloads.length) {
-    const bots = logEl.querySelectorAll(".msg.bot");
-    const last = bots[bots.length - 1];
-    if (last) downloads.forEach((f) => attachDownload(last, f));
-  }
 }
 
 // ---------- 重新生成:从上一条 user 处截断,重发 ----------
@@ -562,7 +566,8 @@ input.addEventListener("keydown", (e) => {
   e.preventDefault(); send(); // 回车:发送
 });
 // ---------- 侧边栏折叠偏好 + 响应式 ----------
-const isMobile = () => window.innerWidth <= 900;
+// <640 = 窄屏手机:覆盖抽屉、选完自动收起;≥640 平板/桌面:推开式常驻,不自动收起
+const isMobile = () => window.innerWidth <= 640;
 function setCollapsed(c) {
   document.body.classList.toggle("collapsed", c);
   localStorage.setItem("sidebar", c ? "collapsed" : "expanded");

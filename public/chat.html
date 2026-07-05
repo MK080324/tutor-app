@@ -183,15 +183,21 @@
     .modal .mbtns .primary { background:var(--accent); color:#fff; border:none; }
     .modal .merr { color:var(--danger); font-size:12px; min-height:16px; margin-top:8px; }
 
-    /* ---- 响应式:手机/平板 ---- */
+    /* ---- 响应式 ---- */
+    /* 平板/桌面(≥640):侧栏为就地布局,展开时自然把主内容压缩(推开式,不覆盖、不遮罩)。
+       这正是默认布局(#side flex:none + #main flex:1),无需额外规则。 */
     #backdrop { display:none; }
-    @media (max-width:900px) {
+    /* 仅窄屏手机(<640):侧栏改覆盖抽屉(屏太窄放不下并排) */
+    @media (max-width:640px) {
       #side { position:fixed; left:0; top:0; bottom:0; z-index:40;
         box-shadow:2px 0 18px rgba(0,0,0,.35); width:80%; max-width:300px; }
       body.collapsed #side { width:0; box-shadow:none; }
       #backdrop { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:35; }
       body.collapsed #backdrop { display:none; }
       body:not(.collapsed) #backdrop { display:block; }
+    }
+    /* 排版微调:主内容较窄时收紧留白(平板竖屏也受益) */
+    @media (max-width:900px) {
       .wrap { padding:0 14px; }
       .bubble { max-width:90%; }
       #title .t { font-size:15px; }

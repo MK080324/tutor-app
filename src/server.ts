@@ -206,10 +206,29 @@ app.post("/api/conversations/:id/truncate", requireAuth, async (req: Req, res) =
   res.json({ ok: true });
 });
 
-// 下载:模型写到 downloads/ 的文件
+// 下载:
+//  - hash 模式(正式的每消息按钮):从只增归档 _dlstore/<sha256> 取不可变快照,
+//    下载文件名用 name 参数还原。文件被改/删都不影响,永远下到当时那份字节。
+//  - file 模式(模型在正文里写的相对链接,尽力而为):从可变的 downloads/ 工作区取。
 app.get("/api/download", requireAuth, (req: Req, res) => {
   const tutor = needTutor(req, res);
   if (!tutor) return;
+  const hash = String(req.query.hash ?? "");
+  if (hash) {
+    if (!/^[a-f0-9]{64}$/.test(hash)) {
+      res.status(404).json({ error: "文件不存在" });
+      return;
+    }
+    // _dlstore 按 (用户,导师) 隔离,userId 来自鉴权 → 无越权风险
+    const full = pathmod.join(userTutorDir(req.userId!, tutor), "_dlstore", hash);
+    if (!fs.existsSync(full)) {
+      res.status(404).json({ error: "文件不存在" });
+      return;
+    }
+    const name = pathmod.basename(String(req.query.name ?? hash)) || hash;
+    res.download(full, name);
+    return;
+  }
   const file = String(req.query.file ?? "");
   const base = pathmod.join(userTutorDir(req.userId!, tutor), "downloads");
   const full = pathmod.resolve(base, file);

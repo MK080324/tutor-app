@@ -2,6 +2,34 @@
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
 
+// ---------- UI 高度接管:position:fixed 钉死 + 键盘期间冻结,避免预留键盘空间 ----------
+// --app-h = window.innerHeight,只在 idle/旋转更新。【键盘期间冻结】:focusin 起不再改高度,
+// body 保持满高 → 系统只是把整个界面平移上去(原生 rigid-up、无空洞),而非把 body 缩小(预留)。
+// 【不监听 visualViewport】:它键盘弹起会缩小,跟随=预留。另有兜底:非键盘态整页禁滚(scrollY 归零)。
+(function initAppHeight() {
+  let kbOpen = false;
+  const setH = () => {
+    if (kbOpen) return; // 键盘期间冻结:绝不缩 body、绝不预留
+    root.style.setProperty("--app-h", window.innerHeight + "px");
+  };
+  const pin = () => {
+    if (!kbOpen && (window.scrollY || window.pageYOffset)) window.scrollTo(0, 0);
+  };
+  setH();
+  window.addEventListener("resize", setH);
+  window.addEventListener("orientationchange", () => setTimeout(setH, 120));
+  window.addEventListener("scroll", pin, { passive: true });
+  const isField = (t) => t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+  document.addEventListener("focusin", (e) => { if (isField(e.target)) kbOpen = true; });
+  document.addEventListener("focusout", (e) => {
+    if (!isField(e.target)) return;
+    kbOpen = false;
+    setTimeout(() => { setH(); pin(); }, 60);
+    setTimeout(() => { setH(); pin(); }, 250);
+    setTimeout(() => { setH(); pin(); }, 500);
+  });
+})();
+
 const FOLDER_SVG =
   '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>';
 const IC = {

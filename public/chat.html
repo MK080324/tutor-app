@@ -17,10 +17,14 @@
       --accent:#4c6ef5; --accent-fg:#fff; --shimmer:#55565c; --danger:#ff6b6b;
     }
     * { box-sizing:border-box; }
+    html { height:100%; overflow:hidden; } /* 文档层不滚动,滚动都在 #log 内部 */
     /* 图标柔和:圆角线端/连接 + 略细 */
     .iconbtn svg, .act svg, .ic, .mic svg, .plus svg {
       stroke-linecap:round; stroke-linejoin:round; stroke-width:1.6; }
-    body { margin:0; height:100vh; height:100dvh; display:flex; overflow:hidden; color:var(--fg);
+    /* UI 固定:position:fixed 钉死 + JS 接管高度 --app-h(见 chat.js initAppHeight)。
+       高度只在 idle/旋转更新,键盘期间冻结 → body 不缩、不预留,系统把界面整体平移上去。 */
+    body { margin:0; position:fixed; top:0; left:0; right:0; height:var(--app-h,100dvh);
+      display:flex; overflow:hidden; color:var(--fg);
       background:var(--bg); font-family:system-ui,-apple-system,"PingFang SC",sans-serif;
       font-size:14px; transition:background .2s,color .2s; }
     button { font-family:inherit; }

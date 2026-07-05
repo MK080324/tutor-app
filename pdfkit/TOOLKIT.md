@@ -61,11 +61,48 @@
 - **不手动排版留白**。不要用连续的 `#v()`、空段落、`#pagebreak()` 去“凑
   版面”。内容顺着写,typst 自动分页。手动塞空白正是空白页的来源。
 - **图表就地插入**,用原生语法(见下),不要期待它“浮动”到别处。
-- **图片必须是文件**。先用 python/matplotlib 生成 `.png`(**画成单色/灰度**,
-  契合白纸黑字),再在 `.typ` 里引用。图片路径相对 `.typ` 文件自身。
+- **图片必须是文件**,放在 `.typ` 同目录再引用(细节见 3.5 画图 / 3.6 插入)。
+  你**自己画**的图(matplotlib)要单色;**外部位图**(截图/照片)保留原色。
 - **字体不要改**。模板已选好西文+中文字体;换字体会破坏服务器可复现性。
 - **有疑问就模仿 `examples/report.typ`**。它覆盖了标题、章节、列表、表格、
   代码、数学、图片全部元素。
+
+---
+
+## 3.5 画图约定(matplotlib)
+
+用 matplotlib 生成图时,严格照下面写,产出的图才和白纸黑字的正文协调:
+
+- **单色**:曲线 `color="black"`,网格 `color="0.85"`;不要用彩色。
+- **单字母轴标签立正**:`y`、`x` 这类单字母标签用 `rotation=0`,让字母正常
+  朝向,**不要旋转成躺倒**。y 轴还要 `ha="right", va="center", labelpad=8`
+  让它贴在轴左侧居中。
+- **去掉上/右边框**:`for s in ["top","right"]: ax.spines[s].set_visible(False)`。
+- **收边再存**:`fig.tight_layout()` 后 `fig.savefig("图名.png", dpi=150)`。
+
+标准模板(直接抄):
+
+```python
+import matplotlib; matplotlib.use("Agg")
+import matplotlib.pyplot as plt, numpy as np
+fig, ax = plt.subplots(figsize=(5, 3))
+ax.plot(x, y, color="black", lw=1.2)
+ax.set_xlabel("x")
+ax.set_ylabel("y", rotation=0, ha="right", va="center", labelpad=8)  # 字母立正
+ax.grid(True, color="0.85", lw=0.5)
+for s in ["top", "right"]: ax.spines[s].set_visible(False)
+fig.tight_layout(); fig.savefig("plot.png", dpi=150)
+```
+
+## 3.6 图片插入约定
+
+- **图片文件必须和引用它的 `.typ` 放同一目录**(或用相对该 `.typ` 的相对
+  路径)。`image("plot.png")` 的路径是相对 `.typ` 文件解析的,不是相对当前
+  终端目录。生成图后先把 `.png` 落到 `.typ` 同目录,再引用。
+- **位图保留原色**:截图、照片等位图不受“白纸黑字”规则约束,原样嵌入。
+  只有 matplotlib 这类**由你生成**的图才要求画成单色(见 3.5)。
+- **控制宽度防溢出**:竖版图用较小宽度(如 `width: 55%`),横版图 `width: 75%`
+  左右。用 `#figure(image(...), caption: [...])` 带题注,不要裸插 `image()`。
 
 ---
 

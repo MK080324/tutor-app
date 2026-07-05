@@ -51,9 +51,9 @@
   // —— 标题:仅用字号与加粗区分层级,不上色 ——
   set heading(numbering: if numbered { "1.1" } else { none })
   show heading: it => block(above: 1.4em, below: 0.8em, text(fill: black, it))
-  show heading.where(level: 1): set text(size: 1.5em, weight: "bold")
-  show heading.where(level: 2): set text(size: 1.25em, weight: "bold")
-  show heading.where(level: 3): set text(size: 1.1em, weight: "bold")
+  show heading.where(level: 1): set text(size: 1.3em, weight: "bold")
+  show heading.where(level: 2): set text(size: 1.15em, weight: "bold")
+  show heading.where(level: 3): set text(size: 1.05em, weight: "bold")
 
   // —— 链接:黑色 + 下划线,不用蓝色 ——
   show link: it => underline(text(fill: black, it))
@@ -76,9 +76,12 @@
   // —— 表:题注为“表 N”,细黑线 ——
   set table(stroke: 0.5pt + black)
 
-  // —— 列表间距收紧 ——
-  set list(spacing: 0.65em)
-  set enum(spacing: 0.65em)
+  // —— 列表:强制“松散”排列,用段落间距分隔每一项 ——
+  // 关键:紧凑列表(项与项间无空行)默认按 par.leading 排,这是个固定值,
+  // 不会为含高分式的数学项(如 lim (x^2-9)/(x-3))留余量,于是挤成一团。
+  // 设 tight: false 后,每一项之间统一用 spacing 分隔,高矮项都有呼吸空间。
+  set list(tight: false, spacing: 0.9em)
+  set enum(tight: false, spacing: 0.9em)
 
   // —— 标题块(如提供 title)——
   if title != none {

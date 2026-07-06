@@ -48,19 +48,9 @@ app.get("/login", page("login.html"));
 app.use(express.static(path.join(ROOT, "public")));
 
 // ---- 登录 ----
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body ?? {};
-  const userId = checkLogin(String(username ?? ""), String(password ?? ""));
-  if (!userId) {
-    res.status(401).json({ error: "用户名或密码错误" });
-    return;
-  }
-  if (!hasCapacity()) {
-    res.status(403).json({ error: "当前人数已满，请稍后再试" });
-    return;
-  }
-  setSession(res, userId);
-  res.json({ ok: true, userId });
+// 用户名密码登录已关闭,只保留手机号验证码 / Google。直接 POST 也会被拒。
+app.post("/api/login", (_req, res) => {
+  res.status(403).json({ error: "用户名密码登录已关闭，请用手机号或 Google 登录" });
 });
 
 app.post("/api/logout", (_req, res) => {

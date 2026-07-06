@@ -27,6 +27,7 @@ import {
   type FilePart,
 } from "./opencode.js";
 import { listTutors, isValidTutor, userTutorDir } from "./tutors.js";
+import { smsEnabled, phoneUserIdFor, sendSmsCode, checkSmsCode } from "./sms.js";
 import fs from "node:fs";
 import pathmod from "node:path";
 import { getAccount, setTheme, setNickname, setPassword } from "./prefs.js";
@@ -71,9 +72,9 @@ app.post("/api/logout", (_req, res) => {
 const googleEnabled = () =>
   !!(config.google.clientId && config.google.clientSecret);
 
-// 前端问:要不要显示 "Continue with Google" 按钮
+// 前端问:显示哪些第三方登录入口
 app.get("/api/auth/config", (_req, res) => {
-  res.json({ google: googleEnabled() });
+  res.json({ google: googleEnabled(), sms: smsEnabled() });
 });
 
 // ① 用户点按钮 → 踢到 Google 授权页
@@ -139,6 +140,72 @@ app.get("/api/auth/google/callback", async (req, res) => {
   } catch {
     fail("登录出错");
   }
+});
+
+// ---- 手机号验证码登录(阿里云号码认证,仅测试用)----
+// 每手机号 60 秒发送冷却(防误点/防刷)。只有白名单里的号能走到发送。
+const smsCooldown = new Map<string, number>();
+
+app.post("/api/auth/sms/send", async (req, res) => {
+  if (!smsEnabled()) {
+    res.status(400).json({ error: "未启用" });
+    return;
+  }
+  const phone = String(req.body?.phone ?? "").trim();
+  // 关键:不在白名单 → 连短信都不发(挡陌生人 + 锁死烧钱)
+  if (!phoneUserIdFor(phone)) {
+    res.status(403).json({ error: "该手机号未获授权" });
+    return;
+  }
+  const now = Date.now();
+  const last = smsCooldown.get(phone) ?? 0;
+  if (now - last < 60_000) {
+    res.status(429).json({ error: `请 ${Math.ceil((60_000 - (now - last)) / 1000)} 秒后再试` });
+    return;
+  }
+  try {
+    await sendSmsCode(phone);
+    smsCooldown.set(phone, now);
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(502).json({ error: e?.message || "发送失败" });
+  }
+});
+
+app.post("/api/auth/sms/verify", async (req, res) => {
+  if (!smsEnabled()) {
+    res.status(400).json({ error: "未启用" });
+    return;
+  }
+  const phone = String(req.body?.phone ?? "").trim();
+  const code = String(req.body?.code ?? "").trim();
+  const userId = phoneUserIdFor(phone);
+  if (!userId) {
+    res.status(403).json({ error: "该手机号未获授权" });
+    return;
+  }
+  if (!code) {
+    res.status(400).json({ error: "请输入验证码" });
+    return;
+  }
+  let ok = false;
+  try {
+    ok = await checkSmsCode(phone, code);
+  } catch {
+    res.status(502).json({ error: "校验失败,请重试" });
+    return;
+  }
+  if (!ok) {
+    res.status(401).json({ error: "验证码错误或已过期" });
+    return;
+  }
+  if (!hasCapacity()) {
+    res.status(403).json({ error: "当前人数已满，请稍后再试" });
+    return;
+  }
+  smsCooldown.delete(phone);
+  setSession(res, userId);
+  res.json({ ok: true, userId });
 });
 
 app.get("/api/me", (req, res) => {

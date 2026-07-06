@@ -35,6 +35,12 @@
       background: var(--input); color: var(--fg); font-size: 14px; text-decoration: none; box-sizing: border-box; }
     a.google:hover { background: rgba(128,128,128,.10); }
     a.google svg { width: 18px; height: 18px; }
+    #sms { display: none; }
+    .phonerow { display: flex; gap: 8px; }
+    .phonerow input { flex: 1; }
+    button.sendbtn { flex: 0 0 auto; margin: 7px 0; padding: 0 12px; font-size: 13px; white-space: nowrap;
+      border: 1px solid var(--border); border-radius: 10px; background: var(--input); color: var(--fg); cursor: pointer; }
+    button.sendbtn:disabled { color: var(--sub); cursor: default; }
     .err { color: var(--err); font-size: 13px; min-height: 18px; margin-top: 10px; }
     .banner { background: var(--err); color: #fff; border-radius: 10px; padding: 9px 12px;
       font-size: 13px; margin-bottom: 14px; display: none; }
@@ -59,6 +65,15 @@
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Continue with Google
     </a>
+    <div id="sms">
+      <div class="divider">或用手机号</div>
+      <div class="phonerow">
+        <input id="phone" placeholder="手机号" inputmode="numeric" autocomplete="tel" />
+        <button class="sendbtn" id="sendcode">发送验证码</button>
+      </div>
+      <input id="code" placeholder="短信验证码" inputmode="numeric" autocomplete="one-time-code" />
+      <button class="go" id="smsgo">手机号登录</button>
+    </div>
     <div class="err" id="err"></div>
   </div>
   <script>
@@ -81,7 +96,7 @@
     // Google 回调失败时把原因显示出来
     if (qs.get("google_error")) err.textContent = qs.get("google_error");
 
-    // 后端启用了 Google 才显示按钮
+    // 后端启用了哪些第三方登录,就显示哪个入口
     fetch("/api/auth/config")
       .then((r) => r.json())
       .then((c) => {
@@ -89,8 +104,51 @@
           document.getElementById("google").style.display = "flex";
           document.getElementById("divider").style.display = "flex";
         }
+        if (c.sms) document.getElementById("sms").style.display = "block";
       })
       .catch(() => {});
+
+    // ---- 手机号验证码登录 ----
+    const phoneEl = document.getElementById("phone");
+    const codeEl = document.getElementById("code");
+    const sendBtn = document.getElementById("sendcode");
+    async function sendCode() {
+      err.textContent = "";
+      const r = await fetch("/api/auth/sms/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone: phoneEl.value.trim() }),
+      });
+      if (!r.ok) {
+        err.textContent = (await r.json().catch(() => ({}))).error || "发送失败";
+        return;
+      }
+      // 60 秒倒计时,防连点
+      let left = 60;
+      sendBtn.disabled = true;
+      sendBtn.textContent = left + "s";
+      const t = setInterval(() => {
+        left--;
+        if (left <= 0) {
+          clearInterval(t);
+          sendBtn.disabled = false;
+          sendBtn.textContent = "发送验证码";
+        } else sendBtn.textContent = left + "s";
+      }, 1000);
+    }
+    async function smsLogin() {
+      err.textContent = "";
+      const r = await fetch("/api/auth/sms/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone: phoneEl.value.trim(), code: codeEl.value.trim() }),
+      });
+      if (r.ok) location.href = "/chat";
+      else err.textContent = (await r.json().catch(() => ({}))).error || "登录失败";
+    }
+    sendBtn.onclick = sendCode;
+    document.getElementById("smsgo").onclick = smsLogin;
+    codeEl.addEventListener("keydown", (e) => { if (e.key === "Enter") smsLogin(); });
     async function login() {
       err.textContent = "";
       const r = await fetch("/api/login", {

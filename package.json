@@ -9,6 +9,7 @@
     "start": "tsx src/server.ts"
   },
   "dependencies": {
+    "@alicloud/pop-core": "^1.8.0",
     "cookie": "^1.0.2",
     "express": "^4.21.2",
     "tsx": "^4.19.2"

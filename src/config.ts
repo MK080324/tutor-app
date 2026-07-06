@@ -83,6 +83,15 @@ export const config = {
     // 邮箱 -> 本 app 内的 userId(数据目录名)。不在表里的邮箱登录后一律拒绝。
     allowlist: parseAllowlist(process.env.GOOGLE_ALLOWLIST ?? ""),
   },
+  // 阿里云号码认证(短信验证码)登录(仅测试用)。key 留空 = 不启用,按钮不显示。
+  aliyunSms: {
+    accessKeyId: process.env.ALIYUN_SMS_KEY_ID ?? "",
+    accessKeySecret: process.env.ALIYUN_SMS_KEY_SECRET ?? "",
+    signName: process.env.ALIYUN_SMS_SIGN ?? "恒创联众",
+    templateCode: process.env.ALIYUN_SMS_TEMPLATE ?? "100001",
+    // 手机号 -> 本 app 内的 userId。只有表里的手机号才发码、才放行(挡陌生人 + 锁死烧钱)。
+    allowlist: parseAllowlist(process.env.SMS_ALLOWLIST ?? ""),
+  },
   // 每用户闲置多久关掉其 opencode 进程(省内存)
   idleTimeoutMs: Number(req("IDLE_TIMEOUT_MS", "600000")),
   // 数据目录:每用户×导师 data/users/<user>/<tutor>/

@@ -46,6 +46,19 @@ function parseUsers(s: string): Map<string, string> {
   return m;
 }
 
+// 解析 Google 白名单 "email:userId,email:userId"。邮箱统一小写(不区分大小写)。
+function parseAllowlist(s: string): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const pair of s.split(",")) {
+    const t = pair.trim();
+    if (!t) continue;
+    const i = t.indexOf(":");
+    if (i < 0) continue;
+    m.set(t.slice(0, i).trim().toLowerCase(), t.slice(i + 1).trim());
+  }
+  return m;
+}
+
 // model 字符串 "provider/model" -> {providerID, modelID}
 export function parseModel(s: string): { providerID: string; modelID: string } {
   const i = s.indexOf("/");
@@ -59,6 +72,17 @@ export const config = {
   users: parseUsers(req("TUTOR_USERS", "alice:pass1")),
   model: parseModel(req("TUTOR_MODEL", "deepseek/deepseek-v4-flash")),
   maxConcurrency: Number(req("MAX_CONCURRENCY", "2")),
+  // Google 第三方登录(仅测试用)。三个都留空 = 不启用,按钮不显示。
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    // 必须和 Google 后台登记的回调一字不差
+    redirectUri:
+      process.env.GOOGLE_REDIRECT_URI ??
+      `https://${process.env.TUTOR_DOMAIN ?? "tutor.gagamin.com"}/api/auth/google/callback`,
+    // 邮箱 -> 本 app 内的 userId(数据目录名)。不在表里的邮箱登录后一律拒绝。
+    allowlist: parseAllowlist(process.env.GOOGLE_ALLOWLIST ?? ""),
+  },
   // 每用户闲置多久关掉其 opencode 进程(省内存)
   idleTimeoutMs: Number(req("IDLE_TIMEOUT_MS", "600000")),
   // 数据目录:每用户×导师 data/users/<user>/<tutor>/

@@ -46,6 +46,29 @@ export function checkLogin(username: string, password: string): string | null {
   return verifyPasswordFor(id, password) ? id : null;
 }
 
+// ---- Google 登录:白名单查表 + 防伪 state ----
+
+// 邮箱(不区分大小写)-> userId;不在白名单返回 null。
+export function googleUserIdFor(email: string): string | null {
+  return config.google.allowlist.get(email.trim().toLowerCase()) ?? null;
+}
+
+// 生成一次性 state:随机数 + 时间戳,用同一把 HMAC 签名。无需服务端存储。
+export function makeOAuthState(): string {
+  const nonce = crypto.randomBytes(16).toString("base64url");
+  return sign(`${nonce}.${Date.now()}`);
+}
+
+// 校验 state:签名对 + 10 分钟内。
+export function verifyOAuthState(state: string | undefined): boolean {
+  const value = verify(state);
+  if (!value) return false;
+  const dot = value.lastIndexOf(".");
+  if (dot < 0) return false;
+  const ts = Number(value.slice(dot + 1));
+  return Number.isFinite(ts) && Date.now() - ts < 10 * 60 * 1000;
+}
+
 export function setSession(res: Response, userId: string) {
   res.setHeader(
     "Set-Cookie",

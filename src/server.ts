@@ -8,6 +8,9 @@ import {
   clearSession,
   getUserId,
   requireAuth,
+  googleUserIdFor,
+  makeOAuthState,
+  verifyOAuthState,
 } from "./auth.js";
 import {
   runPrompt,
@@ -62,6 +65,80 @@ app.post("/api/login", (req, res) => {
 app.post("/api/logout", (_req, res) => {
   clearSession(res);
   res.json({ ok: true });
+});
+
+// ---- Google 第三方登录(仅测试用)----
+const googleEnabled = () =>
+  !!(config.google.clientId && config.google.clientSecret);
+
+// 前端问:要不要显示 "Continue with Google" 按钮
+app.get("/api/auth/config", (_req, res) => {
+  res.json({ google: googleEnabled() });
+});
+
+// ① 用户点按钮 → 踢到 Google 授权页
+app.get("/api/auth/google", (_req, res) => {
+  if (!googleEnabled()) {
+    res.redirect("/login");
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: config.google.clientId,
+    redirect_uri: config.google.redirectUri,
+    response_type: "code",
+    scope: "openid email",
+    state: makeOAuthState(),
+    prompt: "select_account",
+  });
+  res.redirect(
+    `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  );
+});
+
+// ② Google 验完把人踢回来:换 token → 取邮箱 → 查白名单 → 发 session
+app.get("/api/auth/google/callback", async (req, res) => {
+  const fail = (reason: string) =>
+    res.redirect(`/login?google_error=${encodeURIComponent(reason)}`);
+  try {
+    if (!googleEnabled()) return fail("未启用");
+    const code = String(req.query.code ?? "");
+    if (!verifyOAuthState(String(req.query.state ?? ""))) return fail("状态失效，请重试");
+    if (!code) return fail("授权失败");
+
+    // 拿 code 去 Google 换 id_token(我们自己直连 TLS,来源可信,无需再验签)
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: config.google.clientId,
+        client_secret: config.google.clientSecret,
+        redirect_uri: config.google.redirectUri,
+        grant_type: "authorization_code",
+      }).toString(),
+    });
+    if (!tokenRes.ok) return fail("换取令牌失败");
+    const { id_token } = (await tokenRes.json()) as { id_token?: string };
+    if (!id_token) return fail("未拿到身份令牌");
+
+    // 解开 JWT 中间段拿邮箱
+    const payload = JSON.parse(
+      Buffer.from(id_token.split(".")[1], "base64url").toString("utf8")
+    ) as { email?: string; email_verified?: boolean };
+    const email = payload.email ?? "";
+    if (!email || payload.email_verified === false) return fail("邮箱无效");
+
+    // 查白名单:不在表里的一律拒绝(挡陌生人)
+    const userId = googleUserIdFor(email);
+    if (!userId) return fail("该 Google 账号未获授权");
+
+    if (!hasCapacity()) return fail("当前人数已满，请稍后再试");
+
+    setSession(res, userId);
+    res.redirect("/chat");
+  } catch {
+    fail("登录出错");
+  }
 });
 
 app.get("/api/me", (req, res) => {
